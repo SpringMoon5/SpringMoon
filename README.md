@@ -1,5 +1,4 @@
 # SpringMoon
-Bounce
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -54,12 +53,16 @@ Bounce
 <div id="bestRank"></div>
 
 <!-- Sélecteur de cube -->
-<div id="selector" style="position:absolute;top:20px;left:50%;transform:translateX(-50%);z-index:10;text-align:center;">
+<div id="selector" style="position:absolute;top:20px;left:50%;transform:translateX(-50%);z-index:10;text-align:center;width:90%;display:flex;flex-direction:column;align-items:center;">
   <div style="margin-bottom:10px;font-size:18px;color:#fff;font-weight:bold;">Choisis un cube :</div>
+  <div style="display:flex;flex-wrap:nowrap;justify-content:center;gap:3px;">
   <button id="redBtn" onclick="selectType('red')" style="background:red;color:#fff;border:none;padding:10px 14px;font-size:16px;margin:5px;border-radius:8px;"><div>🔴 Rouge</div><div style="font-size:12px;margin-top:5px;">Meilleur : Niveau <span id="redLevel">1</span></div></button>
   <button id="blueBtn" onclick="selectType('blue')" style="background:blue;color:#fff;border:none;padding:10px 14px;font-size:16px;margin:5px;border-radius:8px;"><div>🔵 Bleu</div><div style="font-size:12px;margin-top:5px;">Meilleur : Niveau <span id="blueLevel">1</span></div></button>
   <button id="greenBtn" onclick="selectType('green')" style="background:green;color:#fff;border:none;padding:10px 14px;font-size:16px;margin:5px;border-radius:8px;"><div>🟢 Vert</div><div style="font-size:12px;margin-top:5px;">Meilleur : Niveau <span id="greenLevel">1</span></div></button>
   <button id="yellowBtn" onclick="selectType('yellow')" style="background:gold;color:#000;border:none;padding:10px 14px;font-size:16px;margin:5px;border-radius:8px;"><div>🟡 Jaune</div><div style="font-size:12px;margin-top:5px;">Meilleur : Niveau <span id="yellowLevel">1</span></div></button>
+  <button id="purpleBtn" onclick="selectType('purple')" style="background:purple;color:#fff;border:none;padding:10px 14px;font-size:16px;margin:5px;border-radius:8px;"><div>🟣 Violet</div><div style="font-size:12px;margin-top:5px;">Meilleur : Niveau <span id="purpleLevel">1</span></div></button>
+  <button id="orangeBtn" onclick="selectType('orange')" style="background:orange;color:#000;border:none;padding:10px 14px;font-size:16px;margin:5px;border-radius:8px;"><div>🟠 Orange</div><div style="font-size:12px;margin-top:5px;">Meilleur : Niveau <span id="orangeLevel">1</span></div></button>
+  </div>
 </div>
 
 <script>
@@ -83,7 +86,7 @@ let gameOver = false;
 
 // ====== SCORE ======
 // Scores par cube (individuels)
-  let scores = { red: 0, blue: 0, green: 0, yellow: 0 }; // Scores par cube (individuels)
+  let scores = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0, orange: 0 }; // Scores par cube (individuels)
 let bestScore = localStorage.getItem("bestScore") || 0;
 
 // Meilleurs scores pour chaque cube
@@ -91,7 +94,9 @@ let bestScores = {
   red: localStorage.getItem("bestScore_red") || 0,
   blue: localStorage.getItem("bestScore_blue") || 0,
   green: localStorage.getItem("bestScore_green") || 0,
-  yellow: localStorage.getItem("bestScore_yellow") || 0
+  yellow: localStorage.getItem("bestScore_yellow") || 0,
+  purple: localStorage.getItem("bestScore_purple") || 0,
+  orange: localStorage.getItem("bestScore_orange") || 0
 };
 
 // ====== DIFFICULTÉ ======
@@ -112,6 +117,23 @@ let flyReady = true;
 let flyDuration = 2000; // 2s
 let flyCooldown = 7000; // 7s
 let lastFlyTime = 0;
+let flyFalling = false; // Invincibilité pendant la descente après le vol
+
+// ====== RALENTISSEMENT (VIOLET) ======
+let slowmoActive = false;
+let slowmoReady = true;
+let slowmoDuration = 3000; // 3s
+let slowmoCooldown = 14000; // 14s
+let lastSlowmoTime = 0;
+let slowmoMultiplier = 0.5; // Ralentir à 50% de la vitesse
+
+// ====== AGILITÉ ACCRUE (ORANGE) ======
+let agilityActive = false;
+let agilityReady = true;
+let agilityDuration = 3000; // 3s
+let agilityCooldown = 10000; // 10s
+let lastAgilityTime = 0;
+let agilityVelocityBoost = 1.3; // Augmente la vélocité du saut de 30% (plus rapide mais meme hauteur)
 
 // ====== TIR (ROUGE) ======
 let redInterval = null;
@@ -127,8 +149,8 @@ let lastScoreMultiplierTime = 0;
 let scoreMultiplier = 1; // Multiplicateur du score (1 = normal, 3 = triple gain)
 
 // ====== COURONNES POUR LES NIVEAUX ======
-let currentLevels = { red: 1, blue: 1, green: 1, yellow: 1 };
-let levelUpFlags = { red: false, blue: false, green: false, yellow: false };
+let currentLevels = { red: 1, blue: 1, green: 1, yellow: 1, purple: 1, orange: 1 };
+let levelUpFlags = { red: false, blue: false, green: false, yellow: false, purple: false, orange: false };
 
 // ====== NIVEAUX PAR CUBE ======
 // Chaque palier de 1000 points augmente d'1 niveau, niveaux 1..100
@@ -140,7 +162,12 @@ function getLevelFromScore(s) {
 function jump() {
   if (!player.jumping) {
     // Premier saut
-    player.velocityY = -15;
+    let jumpForce = -15;
+    // Agilité accrue : saute plus rapidement (vélocité augmentée)
+    if (player.type === 'orange' && agilityActive) {
+      jumpForce *= agilityVelocityBoost;
+    }
+    player.velocityY = jumpForce;
     player.jumping = true;
     // Réinitialise les flags liés au bouclier si besoin
   } else {
@@ -183,6 +210,8 @@ function activateAbility() {
     // Désactiver la gravité pendant la durée
     setTimeout(function() {
       flyActive = false;
+      // Activer une courte invincibilité pendant la descente
+      flyFalling = true;
       lastFlyTime = Date.now();
     }, flyDuration);
   } else if (player.type === 'yellow') {
@@ -195,6 +224,22 @@ function activateAbility() {
       scoreMultiplier = 1;
       lastScoreMultiplierTime = Date.now();
     }, scoreMultiplierDuration);
+  } else if (player.type === 'purple') {
+    if (!slowmoReady || slowmoActive) return;
+    slowmoActive = true;
+    slowmoReady = false;
+    setTimeout(function() {
+      slowmoActive = false;
+      lastSlowmoTime = Date.now();
+    }, slowmoDuration);
+  } else if (player.type === 'orange') {
+    if (!agilityReady || agilityActive) return;
+    agilityActive = true;
+    agilityReady = false;
+    setTimeout(function() {
+      agilityActive = false;
+      lastAgilityTime = Date.now();
+    }, agilityDuration);
   }
   else if (player.type === 'red') {
     // Tir manuel pour le rouge si recharge prête
@@ -246,13 +291,19 @@ function selectType(t) {
   } else if (t === 'yellow') {
     // réinitialiser multiplicateur de score
     scoreMultiplierActive = false; scoreMultiplierReady = true; lastScoreMultiplierTime = 0; scoreMultiplier = 1;
+  } else if (t === 'purple') {
+    // réinitialiser ralentissement
+    slowmoActive = false; slowmoReady = true; lastSlowmoTime = 0;
+  } else if (t === 'orange') {
+    // réinitialiser agilité
+    agilityActive = false; agilityReady = true; lastAgilityTime = 0;
   }
 }
 
 // Mettre à jour l'affichage des meilleurs niveaux
 function updateBestLevelsDisplay() {
   // Mettre à jour les niveaux et détecter les level-ups
-  ['red', 'blue', 'green', 'yellow'].forEach(color => {
+  ['red', 'blue', 'green', 'yellow', 'purple', 'orange'].forEach(color => {
     const newLevel = getLevelFromScore(bestScores[color]);
     const levelElement = document.getElementById(color + 'Level');
     
@@ -295,7 +346,9 @@ let gameStartTime = Date.now(); // Enregistrer le moment où le jeu commence
 let lastObstacleTime = 0;
 let obstacleInterval = setInterval(() => {
   let now = Date.now();
-  if (now - lastObstacleTime >= spawnRate) {
+  // Ralentir le spawnRate si le violet est actif
+  let effectiveSpawnRate = slowmoActive ? spawnRate / slowmoMultiplier : spawnRate;
+  if (now - lastObstacleTime >= effectiveSpawnRate) {
     const created = createObstacle();
     if (created) lastObstacleTime = now;
   }
@@ -351,7 +404,9 @@ function gameOverScreen() {
     "🔴 Rouge : " + getLevelFromScore(bestScores.red) + "\n" +
     "🔵 Bleu : " + getLevelFromScore(bestScores.blue) + "\n" +
     "🟢 Vert : " + getLevelFromScore(bestScores.green) + "\n" +
-    "🟡 Jaune : " + getLevelFromScore(bestScores.yellow)
+    "🟡 Jaune : " + getLevelFromScore(bestScores.yellow) + "\n" +
+    "🟣 Violet : " + getLevelFromScore(bestScores.purple) + "\n" +
+    "🟠 Orange : " + getLevelFromScore(bestScores.orange)
   );
   location.reload();
 }
@@ -364,7 +419,7 @@ function update() {
 
   // Score (n'augmente que si le joueur a choisi un cube)
   if (player.type) scores[player.type] += 5 * scoreMultiplier;
-  const totalScore = scores.red + scores.blue + scores.green + scores.yellow;
+  const totalScore = scores.red + scores.blue + scores.green + scores.yellow + scores.purple + scores.orange;
   
   // Mettre à jour l'affichage des couronnes en temps réel
   updateBestLevelsDisplay();
@@ -373,7 +428,7 @@ function update() {
   ctx.font = "16px Arial";
   ctx.fillText("Score Total : " + totalScore, 10, 20);
   ctx.fillText("Meilleur : " + bestScore, 10, 40);
-  ctx.fillText("Niveaux R/B/V/J : " + getLevelFromScore(scores.red) + " / " + getLevelFromScore(scores.blue) + " / " + getLevelFromScore(scores.green) + " / " + getLevelFromScore(scores.yellow), 10, 60);
+  ctx.fillText("Niveaux R/B/V/J/P/O : " + getLevelFromScore(scores.red) + " / " + getLevelFromScore(scores.blue) + " / " + getLevelFromScore(scores.green) + " / " + getLevelFromScore(scores.yellow) + " / " + getLevelFromScore(scores.purple) + " / " + getLevelFromScore(scores.orange), 10, 60);
   
   // Afficher le score du cube sélectionné
   if (player.type === 'red') {
@@ -388,6 +443,12 @@ function update() {
   } else if (player.type === 'yellow') {
     ctx.fillStyle = "gold";
     ctx.fillText("🟡 Jaune : " + scores.yellow, 10, 80);
+  } else if (player.type === 'purple') {
+    ctx.fillStyle = "mediumpurple";
+    ctx.fillText("🟣 Violet : " + scores.purple, 10, 80);
+  } else if (player.type === 'orange') {
+    ctx.fillStyle = "orange";
+    ctx.fillText("🟠 Orange : " + scores.orange, 10, 80);
   }
   
   // Affichage du multiplicateur de score si actif
@@ -428,6 +489,22 @@ function update() {
       rechargeProgress = (now - lastScoreMultiplierTime) / scoreMultiplierCooldown;
       if (rechargeProgress >= 1) { rechargeProgress = 1; scoreMultiplierReady = true; }
     } else rechargeProgress = 1;
+  } else if (player.type === 'purple') {
+    if (!slowmoActive && lastSlowmoTime && now - lastSlowmoTime > slowmoCooldown) slowmoReady = true;
+    if (slowmoActive) {
+      rechargeProgress = 0;
+    } else if (!slowmoReady) {
+      rechargeProgress = (now - lastSlowmoTime) / slowmoCooldown;
+      if (rechargeProgress >= 1) { rechargeProgress = 1; slowmoReady = true; }
+    } else rechargeProgress = 1;
+  } else if (player.type === 'orange') {
+    if (!agilityActive && lastAgilityTime && now - lastAgilityTime > agilityCooldown) agilityReady = true;
+    if (agilityActive) {
+      rechargeProgress = 0;
+    } else if (!agilityReady) {
+      rechargeProgress = (now - lastAgilityTime) / agilityCooldown;
+      if (rechargeProgress >= 1) { rechargeProgress = 1; agilityReady = true; }
+    } else rechargeProgress = 1;
   } else {
     rechargeProgress = 1;
   }
@@ -436,13 +513,21 @@ function update() {
   document.getElementById('rechargeBarFilled').style.width = (rechargeProgress * 100) + "%";
 
   // Joueur
+  let effectiveGravity = gravity;
+  if (slowmoActive) {
+    effectiveGravity *= slowmoMultiplier; // réduit la gravité
+  } else if (player.type === 'orange' && agilityActive) {
+    effectiveGravity *= (agilityVelocityBoost * agilityVelocityBoost); // augmente la gravité au carré pour garder la hauteur identique
+  }
   player.y += player.velocityY;
-  player.velocityY += gravity;
+  player.velocityY += effectiveGravity;
 
   if (player.y >= 220) {
     player.y = 220;
     player.velocityY = 0;
     player.jumping = false;
+    // Le joueur a atterri : terminer la période d'invincibilité post-vol
+    if (flyFalling) flyFalling = false;
   }
   // Effets de vol si actif (vert)
   if (player.type === 'green' && flyActive) {
@@ -463,8 +548,13 @@ function update() {
   } else if (player.type === 'yellow') {
     // Le cube jaune devient plus éclatant si le multiplicateur est actif
     ctx.fillStyle = scoreMultiplierActive ? "yellow" : "gold";
+  } else if (player.type === 'purple') {
+    // Le cube violet devient plus lumineux si ralentissement actif
+    ctx.fillStyle = slowmoActive ? "#5300A1" : "#5300A1";  } else if (player.type === 'orange') {
+    // Le cube orange brille si agilité active
+    ctx.fillStyle = agilityActive ? "#FF6500" : "#FF9500";
   } else {
-    ctx.fillStyle = "orange"; // par défaut
+    ctx.fillStyle = "white"; // par défaut
   }
   ctx.fillRect(player.x, player.y, player.width, player.height);
 
@@ -484,17 +574,42 @@ function update() {
   } else if (player.type === 'yellow' && scoreMultiplierReady && !scoreMultiplierActive) {
     ctx.fillStyle = "white"; ctx.font = "12px Arial"; ctx.fillText("⚡x3 READY", player.x - 20, player.y - 10);
     ctx.strokeStyle = "white"; ctx.lineWidth = 2; ctx.strokeRect(player.x - 5, player.y - 5, player.width + 10, player.height + 10);
+  } else if (player.type === 'purple' && slowmoReady && !slowmoActive) {
+    ctx.fillStyle = "mediumpurple"; ctx.font = "12px Arial"; ctx.fillText("⏱ READY", player.x - 12, player.y - 10);
+    ctx.strokeStyle = "mediumpurple"; ctx.lineWidth = 2; ctx.strokeRect(player.x - 5, player.y - 5, player.width + 10, player.height + 10);
+  } else if (player.type === 'orange' && agilityReady && !agilityActive) {
+    ctx.fillStyle = "orange"; ctx.font = "12px Arial"; ctx.fillText("⚡ READY", player.x - 12, player.y - 10);
+    ctx.strokeStyle = "orange"; ctx.lineWidth = 2; ctx.strokeRect(player.x - 5, player.y - 5, player.width + 10, player.height + 10);
   }
 
+  
   // Obstacles
   // Dessiner et gérer collisions (si bouclier actif, aucune perte)
   obstacles.forEach((obs, index) => {
-    obs.x += obs.speed;
-    // Couleur des obstacles : bleu si bouclier actif (bleu), sinon blanc
-    ctx.fillStyle = (player.type === 'blue' && shieldActive) ? "blue" : "white";
+    let effectiveSpeed = obs.speed * (slowmoActive ? slowmoMultiplier : 1);
+    obs.x += effectiveSpeed;
+    // Couleur des obstacles : orange si agilité active (orange),
+    // bleu si bouclier actif (bleu), sinon blanc
+    if (player.type === 'orange' && agilityActive) {
+      ctx.fillStyle = "orange";
+    } else {
+      ctx.fillStyle = (player.type === 'blue' && shieldActive) ? "blue" : "white";
+    }
     ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
 
-    // Collision
+    // Nettoyage hors-écran (garder ce check même si le joueur est en vol)
+    if (obs.x < -50 || obs.x > canvas.width + 50) {
+      obstacles.splice(index, 1);
+      return;
+    }
+
+    // Si le joueur est le cube vert en vol ou en descente post-vol, il est invincible :
+    // on ignore les collisions (les obstacles passent sous le joueur).
+    if (player.type === 'green' && (flyActive || flyFalling)) {
+      return; // continue
+    }
+
+    // Collision (traitée normalement pour les autres cas)
     if (
       player.x < obs.x + obs.width &&
       player.x + player.width > obs.x &&
@@ -502,21 +617,15 @@ function update() {
       player.y + player.height > obs.y
     ) {
       if (player.type === 'blue' && shieldActive) {
-        // neutralisé
+        // neutralisé par le bouclier
         obstacles.splice(index, 1);
       } else if (player.type === 'red') {
         // collision normale (si red n'a pas de bouclier) -> game over
         gameOver = true; gameOverScreen();
-      } else if (player.type === 'green' && flyActive) {
-        // si en vol, éviter la collision (on considère que le joueur est au-dessus)
-        // neutraliser
-        obstacles.splice(index, 1);
       } else {
         gameOver = true; gameOverScreen();
       }
     }
-
-    if (obs.x < -50 || obs.x > canvas.width + 50) obstacles.splice(index, 1);
   });
 
   requestAnimationFrame(update);
