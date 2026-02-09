@@ -60,9 +60,10 @@
   <button id="blueBtn" onclick="selectType('blue')" style="background:blue;color:#fff;border:none;padding:10px 14px;font-size:16px;margin:5px;border-radius:8px;"><div>🔵 Bleu</div><div style="font-size:12px;margin-top:5px;">Meilleur : Niveau <span id="blueLevel">1</span></div></button>
   <button id="greenBtn" onclick="selectType('green')" style="background:green;color:#fff;border:none;padding:10px 14px;font-size:16px;margin:5px;border-radius:8px;"><div>🟢 Vert</div><div style="font-size:12px;margin-top:5px;">Meilleur : Niveau <span id="greenLevel">1</span></div></button>
   <button id="orangeBtn" onclick="selectType('orange')" style="background:orange;color:#000;border:none;padding:10px 14px;font-size:16px;margin:5px;border-radius:8px;"><div>🟠 Orange</div><div style="font-size:12px;margin-top:5px;">Meilleur : Niveau <span id="orangeLevel">1</span></div></button>
-  <button id="cyanBtn" onclick="selectType('cyan')" style="background:cyan;color:#000;border:none;padding:10px 14px;font-size:16px;margin:5px;border-radius:8px;"><div>🔷 Cyan</div><div style="font-size:12px;margin-top:5px;">Meilleur : Niveau <span id="cyanLevel">1</span></div></button>
+  <button id="cyanBtn" onclick="selectType('cyan')" style="background:cyan;color:#000;border:none;padding:10px 14px;font-size:16px;margin:5px;border-radius:8px;"><div><span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:cyan;border:1px solid #000;vertical-align:middle;margin-right:8px;"></span> Cyan</div><div style="font-size:12px;margin-top:5px;">Meilleur : Niveau <span id="cyanLevel">1</span></div></button>
   <button id="yellowBtn" onclick="selectType('yellow')" style="background:gold;color:#000;border:none;padding:10px 14px;font-size:16px;margin:5px;border-radius:8px;"><div>🟡 Jaune</div><div style="font-size:12px;margin-top:5px;">Meilleur : Niveau <span id="yellowLevel">1</span></div></button>
   <button id="purpleBtn" onclick="selectType('purple')" style="background:purple;color:#fff;border:none;padding:10px 14px;font-size:16px;margin:5px;border-radius:8px;"><div>🟣 Violet</div><div style="font-size:12px;margin-top:5px;">Meilleur : Niveau <span id="purpleLevel">1</span></div></button>
+  <button id="grayBtn" onclick="selectType('gray')" style="background:gray;color:#fff;border:none;padding:10px 14px;font-size:16px;margin:5px;border-radius:8px;"><div style="display:flex;align-items:center;gap:6px;"><span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:gray;border:1px solid #000;vertical-align:middle;margin-left:23px;"></span> Gris</div><div style="font-size:12px;margin-top:5px;">Meilleur : Niveau <span id="grayLevel">1</span></div></button>
   </div>
 </div>
 
@@ -87,7 +88,7 @@ let gameOver = false;
 
 // ====== SCORE ======
 // Scores par cube (individuels)
-  let scores = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0, orange: 0, cyan: 0 }; // Scores par cube (individuels)
+  let scores = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0, orange: 0, cyan: 0, gray: 0 }; // Scores par cube (individuels)
 let bestScore = localStorage.getItem("bestScore") || 0;
 
 // Meilleurs scores pour chaque cube
@@ -100,6 +101,9 @@ let bestScores = {
   orange: localStorage.getItem("bestScore_orange") || 0,
   cyan: localStorage.getItem("bestScore_cyan") || 0
 };
+
+// Best score for gray
+bestScores.gray = localStorage.getItem("bestScore_gray") || 0;
 
 // ====== DIFFICULTÉ ======
 let obstacleSpeed = 6;
@@ -156,6 +160,14 @@ let magnetReady = true;
 let magnetDuration = 2000; // 2s
 let magnetCooldown = 10000; // 10s
 let lastMagnetTime = 0;
+
+// ====== RÉDUCTION D'OBSTACLES (GRIS) ======
+let shrinkActive = false;
+let shrinkReady = true;
+let shrinkDuration = 4000; // 4s
+let shrinkCooldown = 13000; // 13s
+let lastShrinkTime = 0;
+let shrinkFactor = 0.5; // obstacles rendered at 50% size when active
 
 // ====== COURONNES POUR LES NIVEAUX ======
 let currentLevels = { red: 1, blue: 1, green: 1, yellow: 1, purple: 1, orange: 1 };
@@ -250,6 +262,15 @@ function activateAbility() {
       lastAgilityTime = Date.now();
     }, agilityDuration);
   }
+  else if (player.type === 'gray') {
+    if (!shrinkReady || shrinkActive) return;
+    shrinkActive = true;
+    shrinkReady = false;
+    setTimeout(function() {
+      shrinkActive = false;
+      lastShrinkTime = Date.now();
+    }, shrinkDuration);
+  }
   else if (player.type === 'cyan') {
     if (!magnetReady || magnetActive) return;
     magnetActive = true;
@@ -318,13 +339,16 @@ function selectType(t) {
   } else if (t === 'cyan') {
     // réinitialiser aimant
     magnetActive = false; magnetReady = true; lastMagnetTime = 0;
+  } else if (t === 'gray') {
+    // réinitialiser réduction
+    shrinkActive = false; shrinkReady = true; lastShrinkTime = 0;
   }
 }
 
 // Mettre à jour l'affichage des meilleurs niveaux
 function updateBestLevelsDisplay() {
   // Mettre à jour les niveaux et détecter les level-ups
-  ['red', 'blue', 'green', 'cyan', 'yellow', 'purple', 'orange'].forEach(color => {
+  ['red', 'blue', 'green', 'cyan', 'yellow', 'purple', 'orange', 'gray'].forEach(color => {
     const newLevel = getLevelFromScore(bestScores[color]);
     const levelElement = document.getElementById(color + 'Level');
     
@@ -429,7 +453,8 @@ function gameOverScreen() {
     "🔷 Cyan : " + getLevelFromScore(bestScores.cyan) + "\n" +
     "🟡 Jaune : " + getLevelFromScore(bestScores.yellow) + "\n" +
     "🟣 Violet : " + getLevelFromScore(bestScores.purple) + "\n" +
-    "🟠 Orange : " + getLevelFromScore(bestScores.orange)
+    "🟠 Orange : " + getLevelFromScore(bestScores.orange) + "\n" +
+    "🔘 Gris : " + getLevelFromScore(bestScores.gray)
   );
   location.reload();
 }
@@ -442,7 +467,7 @@ function update() {
 
   // Score (n'augmente que si le joueur a choisi un cube)
   if (player.type) scores[player.type] += 5 * scoreMultiplier;
-  const totalScore = scores.red + scores.blue + scores.green + scores.yellow + scores.purple + scores.orange;
+  const totalScore = scores.red + scores.blue + scores.green + scores.yellow + scores.purple + scores.orange + scores.cyan + scores.gray;
   
   // Mettre à jour l'affichage des couronnes en temps réel
   updateBestLevelsDisplay();
@@ -450,7 +475,7 @@ function update() {
   ctx.fillStyle = "white";
   ctx.font = "16px Arial";
   ctx.fillText("Meilleur : " + bestScore, 10, 20);
-  ctx.fillText("Niveaux R/B/V/BL/J/P/O : " + getLevelFromScore(scores.red) + " / " + getLevelFromScore(scores.blue) + " / " + getLevelFromScore(scores.green) + " / " + getLevelFromScore(scores.cyan) + " / " + getLevelFromScore(scores.yellow) + " / " + getLevelFromScore(scores.purple) + " / " + getLevelFromScore(scores.orange), 10, 40);
+  ctx.fillText("Niveaux R/B/V/BL/J/P/O/G : " + getLevelFromScore(scores.red) + " / " + getLevelFromScore(scores.blue) + " / " + getLevelFromScore(scores.green) + " / " + getLevelFromScore(scores.cyan) + " / " + getLevelFromScore(scores.yellow) + " / " + getLevelFromScore(scores.purple) + " / " + getLevelFromScore(scores.orange) + " / " + getLevelFromScore(scores.gray), 10, 40);
   
   // Afficher le score du cube sélectionné
   if (player.type === 'red') {
@@ -464,7 +489,7 @@ function update() {
     ctx.fillText("🟢 Vert : " + scores.green, 10, 60);
   } else if (player.type === 'cyan') {
     ctx.fillStyle = "cyan";
-    ctx.fillText("🔷 Cyan : " + scores.cyan, 10, 60);
+    ctx.fillText("Ⓜ️​ Cyan : " + scores.cyan, 10, 60);
   } else if (player.type === 'yellow') {
     ctx.fillStyle = "gold";
     ctx.fillText("🟡 Jaune : " + scores.yellow, 10, 60);
@@ -474,6 +499,9 @@ function update() {
   } else if (player.type === 'orange') {
     ctx.fillStyle = "orange";
     ctx.fillText("🟠 Orange : " + scores.orange, 10, 60);
+  } else if (player.type === 'gray') {
+    ctx.fillStyle = "gray";
+    ctx.fillText("🔘 Gris : " + scores.gray, 10, 60);
   }
   // Affichage du multiplicateur de score si actif
   if (scoreMultiplierActive) {
@@ -512,6 +540,14 @@ function update() {
     } else if (!scoreMultiplierReady) {
       rechargeProgress = (now - lastScoreMultiplierTime) / scoreMultiplierCooldown;
       if (rechargeProgress >= 1) { rechargeProgress = 1; scoreMultiplierReady = true; }
+    } else rechargeProgress = 1;
+  } else if (player.type === 'gray') {
+    if (!shrinkActive && lastShrinkTime && now - lastShrinkTime > shrinkCooldown) shrinkReady = true;
+    if (shrinkActive) {
+      rechargeProgress = 0;
+    } else if (!shrinkReady) {
+      rechargeProgress = (now - lastShrinkTime) / shrinkCooldown;
+      if (rechargeProgress >= 1) { rechargeProgress = 1; shrinkReady = true; }
     } else rechargeProgress = 1;
   } else if (player.type === 'purple') {
     if (!slowmoActive && lastSlowmoTime && now - lastSlowmoTime > slowmoCooldown) slowmoReady = true;
@@ -589,6 +625,9 @@ function update() {
   } else if (player.type === 'orange') {
     // Le cube orange brille si agilité active
     ctx.fillStyle = agilityActive ? "#FF6500" : "#FF9500";
+    } else if (player.type === 'gray') {
+      // Le cube gris indique son état quand la réduction est active
+      ctx.fillStyle = shrinkActive ? "#A9A9A9" : "gray";
   } else {
     ctx.fillStyle = "white"; // par défaut
   }
@@ -619,6 +658,9 @@ function update() {
   } else if (player.type === 'cyan' && magnetReady && !magnetActive) {
     ctx.fillStyle = "cyan"; ctx.font = "12px Arial"; ctx.fillText("🧲 READY", player.x - 12, player.y - 10);
     ctx.strokeStyle = "cyan"; ctx.lineWidth = 2; ctx.strokeRect(player.x - 5, player.y - 5, player.width + 10, player.height + 10);
+  } else if (player.type === 'gray' && shrinkReady && !shrinkActive) {
+    ctx.fillStyle = "gray"; ctx.font = "12px Arial"; ctx.fillText("⇳ SMALL", player.x - 18, player.y - 10);
+    ctx.strokeStyle = "gray"; ctx.lineWidth = 1; ctx.strokeRect(player.x - 5, player.y - 5, player.width + 10, player.height + 10);
   }
 
   
@@ -643,14 +685,20 @@ function update() {
     
     // Couleur des obstacles : orange si agilité active (orange),
     // cyan si aimant actif (cyan), bleu si bouclier actif (bleu), sinon blanc
-    if (player.type === 'orange' && agilityActive) {
-      ctx.fillStyle = "orange";
-    } else if (player.type === 'cyan' && magnetActive) {
-      ctx.fillStyle = "cyan";
-    } else {
-      ctx.fillStyle = (player.type === 'blue' && shieldActive) ? "blue" : "white";
-    }
-    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+      // Determine drawn size when shrink is active
+      const drawW = shrinkActive ? obs.width * shrinkFactor : obs.width;
+      const drawH = shrinkActive ? obs.height * shrinkFactor : obs.height;
+      const drawX = obs.x + (obs.width - drawW) / 2;
+      const drawY = obs.y + (obs.height - drawH) / 2;
+
+      if (player.type === 'orange' && agilityActive) {
+        ctx.fillStyle = "orange";
+      } else if (player.type === 'cyan' && magnetActive) {
+        ctx.fillStyle = "cyan";
+      } else {
+        ctx.fillStyle = (player.type === 'blue' && shieldActive) ? "blue" : "white";
+      }
+      ctx.fillRect(drawX, drawY, drawW, drawH);
 
     // Nettoyage hors-écran (garder ce check même si le joueur est en vol)
     if (obs.x < -50 || obs.x > canvas.width + 50) {
@@ -666,18 +714,22 @@ function update() {
 
     // Collision (traitée normalement pour les autres cas)
     if (
-      player.x < obs.x + obs.width &&
-      player.x + player.width > obs.x &&
-      player.y < obs.y + obs.height &&
-      player.y + player.height > obs.y
+      player.x < drawX + drawW &&
+      player.x + player.width > drawX &&
+      player.y < drawY + drawH &&
+      player.y + player.height > drawY
     ) {
       if (player.type === 'blue' && shieldActive) {
         // neutralisé par le bouclier
-        oscores['blue'] += 100; // Ajouter 100 points au score
-        bstacles.splice(index, 1);
+        scores['blue'] += 100; // Ajouter 100 points au score
+        obstacles.splice(index, 1);
       } else if (player.type === 'cyan' && magnetActive) {
         // neutralisé par l'aimant
         scores['cyan'] += 100; // Ajouter 100 points au score
+        obstacles.splice(index, 1);
+      } else if (player.type === 'gray' && shrinkActive) {
+        // neutralisé par la réduction : on gagne aussi des points
+        scores['gray'] += 100;
         obstacles.splice(index, 1);
       } else if (player.type === 'red') {
         // collision normale (si red n'a pas de bouclier) -> game over
@@ -699,6 +751,14 @@ update();
 
 </body>
 </html>
+
+
+
+
+
+
+
+
 
 
 
