@@ -212,10 +212,11 @@
     <button class="tab-btn" data-type="red" onclick="switchTab('red', event)">🔴 Rouge</button>
     <button class="tab-btn" data-type="blue" onclick="switchTab('blue', event)">🔵 Bleu</button>
     <button class="tab-btn" data-type="green" onclick="switchTab('green', event)">🟢 Vert</button>
+    <button class="tab-btn" data-type="orange" onclick="switchTab('orange', event)">🟠 Orange</button>
+    <button class="tab-btn" data-type="pink" onclick="switchTab('pink', event)">💗 Rose</button>
     <button class="tab-btn" data-type="cyan" onclick="switchTab('cyan', event)">🔷 Cyan</button>
     <button class="tab-btn" data-type="yellow" onclick="switchTab('yellow', event)">🟡 Jaune</button>
     <button class="tab-btn" data-type="purple" onclick="switchTab('purple', event)">🟣 Violet</button>
-    <button class="tab-btn" data-type="orange" onclick="switchTab('orange', event)">🟠 Orange</button>
     <button class="tab-btn" data-type="gray" onclick="switchTab('gray', event)">⬜ Gris</button>
   </div>
 
@@ -262,6 +263,12 @@
   </div>
 
   <div id="orange" class="leaderboard">
+    <div class="leaderboard-table">
+      <div class="loading">Chargement...</div>
+    </div>
+  </div>
+
+  <div id="pink" class="leaderboard">
     <div class="leaderboard-table">
       <div class="loading">Chargement...</div>
     </div>
@@ -416,3 +423,4 @@ document.addEventListener('DOMContentLoaded', () => loadLeaderboard('all'));
 
 </body>
 </html>
+
